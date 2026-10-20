@@ -9,7 +9,6 @@ def parse_traceback(traceback_text:str) -> dict:
 
     match1 = re.search(r'^([^:]+):\s*(.*)$',last_line)
     if not match1:
-      print('未找到错误类型')
       return {}
     error_type,message = match1.group(1),match1.group(2)
 
