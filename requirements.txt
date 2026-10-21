@@ -1,0 +1,7 @@
+langchain-core
+langchain-openai
+openai
+pydantic>=2,<3
+python-dotenv
+pytest
+httpx

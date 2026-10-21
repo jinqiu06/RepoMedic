@@ -23,6 +23,11 @@ def build_parser() -> argparse.ArgumentParser:
         required = True,
         help = '包含 python Traceback的文件路径'
     )
+    parser.add_argument(
+    "--ai",
+    action="store_true",
+    help="启用 AI 诊断，将错误信息及相关源码发送到模型服务"
+)
 
     return parser
 
@@ -78,6 +83,30 @@ def main(argv: list[str] | None = None) -> int:
     if result is None:
         print("错误：无法从 Traceback 中定位异常", file=sys.stderr)
         return 1
-    
-    print(json.dumps(result,ensure_ascii = False,indent = 2))
-    return 0
+    if not args.ai:
+       print(json.dumps(result,ensure_ascii = False,indent = 2))
+       return 0
+    else:
+        from repomedic.llm_client import diagnose_error, LLMServiceError
+        from repomedic.config import get_load
+
+        try:
+           llm = get_load()
+           answer = diagnose_error(result, llm)
+
+        except LLMServiceError as exc:
+           print(f"AI 诊断失败：{exc}", file=sys.stderr)
+           return 3
+
+        except RuntimeError:
+           print("AI 模型配置或初始化失败", file=sys.stderr)
+           return 3
+
+        except ValueError:
+           print("AI 诊断输入或响应格式无效", file=sys.stderr)
+           return 3
+
+        result["ai_diagnosis"] = answer.model_dump()
+
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
