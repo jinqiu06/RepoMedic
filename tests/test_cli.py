@@ -1,6 +1,29 @@
 import json
+import pytest
 from pathlib import Path
 from repomedic.cli import main
+
+
+def test_modes_are_mutually_exclusive():
+    with pytest.raises(SystemExit) as exc:
+        main(["--project-root", ".", "--traceback-file", "x", "--ai", "--agent"])
+    assert exc.value.code == 2
+
+
+def test_agent_cli(tmp_path, monkeypatch, capsys):
+    from repomedic.agent_graph import run_agent
+    from test_agent_graph import fake_model
+    import repomedic.agent_graph as graph_module
+
+    source = tmp_path / "app.py"
+    source.write_text("def load_user(): return None\n", encoding="utf-8")
+    trace = tmp_path / "trace.txt"
+    trace.write_text('Traceback (most recent call last):\n  File "app.py", line 1, in load_user\nTypeError: bad value\n', encoding="utf-8")
+    monkeypatch.setattr(graph_module, "run_agent", lambda root, info: run_agent(root, info, fake_model()))
+    assert main(["--project-root", str(tmp_path), "--traceback-file", str(trace), "--agent"]) == 0
+    output = json.loads(capsys.readouterr().out)
+    assert output["investigation"]["search_results"][0]["matches"]
+    assert output["ai_diagnosis"]["status"] == "diagnosed"
 
 def test_cli_success(tmp_path: Path, capsys) -> None:
     # 创建临时项目
@@ -88,7 +111,7 @@ def test_cli_traceback_is_directory(tmp_path: Path, capsys):
 
     assert exit_code == 2
     assert "Traceback 文件" in captured.err
-def test_cli_oversized_traceback(tmp_path:Path,capsys): 
+def test_cli_oversized_traceback(tmp_path:Path,capsys):
     project = tmp_path / "project"
     project.mkdir()
 
@@ -106,4 +129,4 @@ def test_cli_oversized_traceback(tmp_path:Path,capsys):
     captured = capsys.readouterr()
 
     assert exit_code == 2
-    assert "超过 1 MiB" in captured.err    
+    assert "超过 1 MiB" in captured.err

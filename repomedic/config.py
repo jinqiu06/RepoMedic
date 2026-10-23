@@ -2,7 +2,9 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
+from functools import lru_cache
 
+@lru_cache(maxsize = 1)
 def get_load() -> ChatOpenAI:
     env_path = Path(__file__).resolve().parent / ".env"
 

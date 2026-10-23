@@ -5,3 +5,4 @@ pydantic>=2,<3
 python-dotenv
 pytest
 httpx
+langgraph>=1.0,<2

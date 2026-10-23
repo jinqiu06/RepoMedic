@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "app.py", line 11, in <module>
+    greet()
+  File "app.py", line 7, in greet
+    return user["name"]
+TypeError: 'NoneType' object is not subscriptable

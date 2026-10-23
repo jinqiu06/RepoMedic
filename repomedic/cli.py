@@ -23,7 +23,9 @@ def build_parser() -> argparse.ArgumentParser:
         required = True,
         help = '包含 python Traceback的文件路径'
     )
-    parser.add_argument(
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument("--agent", action="store_true", help="启用一轮源码调查和 AI 诊断")
+    modes.add_argument(
     "--ai",
     action="store_true",
     help="启用 AI 诊断，将错误信息及相关源码发送到模型服务"
@@ -83,6 +85,22 @@ def main(argv: list[str] | None = None) -> int:
     if result is None:
         print("错误：无法从 Traceback 中定位异常", file=sys.stderr)
         return 1
+    if args.agent:
+        from repomedic.agent_graph import run_agent
+
+        state = run_agent(str(project_root.resolve()), result)
+        if state.get("error_message"):
+            print(state["error_message"], file=sys.stderr)
+            return 3
+        result["ai_diagnosis"] = state["diagnosis"].model_dump()
+        result["investigation"] = {
+            "decision": state["investigation_decision"].model_dump(),
+            "search_results": state.get("search_results", []),
+            "additional_context": state.get("additional_context", []),
+            "warnings": state.get("warnings", []),
+        }
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
     if not args.ai:
        print(json.dumps(result,ensure_ascii = False,indent = 2))
        return 0
